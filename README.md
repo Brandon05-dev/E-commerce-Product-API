@@ -66,23 +66,23 @@ E-commerce-Product-API/
 
 ### Products
 - `GET /api/products/` - List products (paginated) 🔓 *Public*
-- `POST /api/products/` - Create product 🔒 *Requires Authentication*
+- `POST /api/products/` - Create product � *Staff/Admin Only*
 - `GET /api/products/{id}/` - Retrieve single product 🔓 *Public*
-- `PUT /api/products/{id}/` - Update product (full) 🔒 *Requires Authentication*
-- `PATCH /api/products/{id}/` - Update product (partial) 🔒 *Requires Authentication*
-- `DELETE /api/products/{id}/` - Delete product 🔒 *Requires Authentication*
+- `PUT /api/products/{id}/` - Update product (full) � *Staff/Admin Only*
+- `PATCH /api/products/{id}/` - Update product (partial) � *Staff/Admin Only*
+- `DELETE /api/products/{id}/` - Delete product � *Staff/Admin Only*
 
 ### Categories
 - `GET /api/categories/` - List categories (paginated) 🔓 *Public*
-- `POST /api/categories/` - Create category 🔒 *Requires Authentication*
+- `POST /api/categories/` - Create category � *Staff/Admin Only*
 - `GET /api/categories/{id}/` - Retrieve single category 🔓 *Public*
-- `PUT /api/categories/{id}/` - Update category (full) 🔒 *Requires Authentication*
-- `PATCH /api/categories/{id}/` - Update category (partial) 🔒 *Requires Authentication*
-- `DELETE /api/categories/{id}/` - Delete category 🔒 *Requires Authentication*
+- `PUT /api/categories/{id}/` - Update category (full) � *Staff/Admin Only*
+- `PATCH /api/categories/{id}/` - Update category (partial) � *Staff/Admin Only*
+- `DELETE /api/categories/{id}/` - Delete category � *Staff/Admin Only*
 
 ### Custom Actions
 - `GET /api/products/low_stock/` - Get products with stock < 10 🔓 *Public*
-- `POST /api/products/{id}/update_stock/` - Update product stock 🔒 *Requires Authentication*
+- `POST /api/products/{id}/update_stock/` - Update product stock � *Staff/Admin Only*
 - `GET /api/categories/{id}/products/` - Get products in category 🔓 *Public*
 
 ## Query Parameters
@@ -265,7 +265,8 @@ curl -X POST http://localhost:8000/api/auth/token/refresh/ \
 
 ### Permission Model:
 - **Anonymous Users**: Can read all data (GET requests)
-- **Authenticated Users**: Can read and write all data (GET, POST, PUT, PATCH, DELETE)
+- **Regular Authenticated Users**: Can only read all data (GET requests)
+- **Staff/Admin Users**: Can read and write all data (GET, POST, PUT, PATCH, DELETE)
 - **Invalid/Expired Tokens**: Return 401 Unauthorized
 
 ### Token Configuration:
@@ -290,6 +291,77 @@ This will demonstrate:
 - Public vs protected endpoints
 - Authentication failure scenarios
 - Token refresh workflow
+
+## Role-Based Permissions 🛡️
+
+The API implements role-based access control to ensure data security and proper authorization:
+
+### Permission Levels
+
+1. **🔓 Anonymous Users (Public Access)**
+   - Can read all products and categories
+   - Cannot create, update, or delete any data
+   - No authentication required
+
+2. **🔒 Regular Authenticated Users**
+   - Can read all products and categories  
+   - Cannot create, update, or delete any data
+   - Must provide valid JWT token
+   - Returns `403 Forbidden` for write operations
+
+3. **👑 Staff/Admin Users**
+   - Full access to all operations
+   - Can create, read, update, and delete products and categories
+   - Must provide valid JWT token
+   - Must have `is_staff=True` or `is_superuser=True`
+
+### How to Create Staff/Admin Users
+
+#### Via Django Admin:
+1. Access `/admin/` with superuser credentials
+2. Go to Users section
+3. Edit user and check "Staff status" or "Superuser status"
+
+#### Via Django Shell:
+```python
+# Create staff user
+python manage.py shell
+>>> from django.contrib.auth.models import User
+>>> user = User.objects.get(username='your_username')
+>>> user.is_staff = True
+>>> user.save()
+
+# Or create superuser directly
+python manage.py createsuperuser
+```
+
+### Testing Permissions
+
+```bash
+# 1. Create regular user and get token
+curl -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "regular_user", "password": "password"}'
+
+# 2. Try to create product (should fail with 403)
+curl -X POST http://localhost:8000/api/products/ \
+  -H "Authorization: Bearer <regular_user_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Product", "price": "99.99", "category": 1}'
+
+# 3. Same request with staff/admin token (should succeed)
+curl -X POST http://localhost:8000/api/products/ \
+  -H "Authorization: Bearer <staff_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Product", "price": "99.99", "category": 1}'
+```
+
+### Implementation Details
+
+The permission system uses a custom `IsAdminOrReadOnly` permission class that:
+- Allows all users (including anonymous) to perform safe operations (GET, HEAD, OPTIONS)
+- Restricts unsafe operations (POST, PUT, PATCH, DELETE) to staff and admin users only
+- Returns appropriate HTTP status codes (403 Forbidden for unauthorized write attempts)
 
 ## Dependencies
 
