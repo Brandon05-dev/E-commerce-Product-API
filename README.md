@@ -1,16 +1,18 @@
 # E-commerce Product API
 
-A production-ready Django REST Framework backend for an E-commerce API with comprehensive CRUD operations for products and categories.
+A production-ready Django REST Framework backend for an E-commerce API with comprehensive CRUD operations for products and categories, featuring JWT authentication.
 
 ## Features
 
 - **Django REST Framework** with ViewSets and Routers
+- **JWT Authentication** with djangorestframework-simplejwt
+- **Permission-based Access Control** (Read-only for anonymous, full access for authenticated)
 - **Category and Product Models** with proper relationships
 - **CRUD Operations** for both categories and products
 - **Advanced Filtering** by category, price range, stock status, and search
 - **Pagination** support for large datasets
 - **Admin Interface** with custom configurations
-- **Comprehensive Test Suite** with 15+ test cases
+- **Comprehensive Test Suite** with 30+ test cases including JWT authentication tests
 - **Sample Data Management** command
 - **Production-ready Structure** with proper validation
 
@@ -57,26 +59,31 @@ E-commerce-Product-API/
 
 ## API Endpoints
 
+### Authentication (JWT)
+- `POST /api/auth/token/` - Obtain JWT token pair (access & refresh)
+- `POST /api/auth/token/refresh/` - Refresh access token
+- `POST /api/auth/token/verify/` - Verify token validity
+
 ### Products
-- `GET /api/products/` - List products (paginated)
-- `POST /api/products/` - Create product
-- `GET /api/products/{id}/` - Retrieve single product
-- `PUT /api/products/{id}/` - Update product (full)
-- `PATCH /api/products/{id}/` - Update product (partial)
-- `DELETE /api/products/{id}/` - Delete product
+- `GET /api/products/` - List products (paginated) 🔓 *Public*
+- `POST /api/products/` - Create product 🔒 *Requires Authentication*
+- `GET /api/products/{id}/` - Retrieve single product 🔓 *Public*
+- `PUT /api/products/{id}/` - Update product (full) 🔒 *Requires Authentication*
+- `PATCH /api/products/{id}/` - Update product (partial) 🔒 *Requires Authentication*
+- `DELETE /api/products/{id}/` - Delete product 🔒 *Requires Authentication*
 
 ### Categories
-- `GET /api/categories/` - List categories (paginated)
-- `POST /api/categories/` - Create category
-- `GET /api/categories/{id}/` - Retrieve single category
-- `PUT /api/categories/{id}/` - Update category (full)
-- `PATCH /api/categories/{id}/` - Update category (partial)
-- `DELETE /api/categories/{id}/` - Delete category
+- `GET /api/categories/` - List categories (paginated) 🔓 *Public*
+- `POST /api/categories/` - Create category 🔒 *Requires Authentication*
+- `GET /api/categories/{id}/` - Retrieve single category 🔓 *Public*
+- `PUT /api/categories/{id}/` - Update category (full) 🔒 *Requires Authentication*
+- `PATCH /api/categories/{id}/` - Update category (partial) 🔒 *Requires Authentication*
+- `DELETE /api/categories/{id}/` - Delete category 🔒 *Requires Authentication*
 
 ### Custom Actions
-- `GET /api/products/low_stock/` - Get products with stock < 10
-- `POST /api/products/{id}/update_stock/` - Update product stock
-- `GET /api/categories/{id}/products/` - Get products in category
+- `GET /api/products/low_stock/` - Get products with stock < 10 🔓 *Public*
+- `POST /api/products/{id}/update_stock/` - Update product stock 🔒 *Requires Authentication*
+- `GET /api/categories/{id}/products/` - Get products in category 🔓 *Public*
 
 ## Query Parameters
 
@@ -224,10 +231,71 @@ Example: `http://127.0.0.1:8000/api/products/`
 - **Logging**: Configure proper logging
 - **Deployment**: Use Gunicorn/uWSGI with Nginx
 
+## JWT Authentication
+
+### How to authenticate:
+
+1. **Obtain Token**:
+```bash
+curl -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "your_username", "password": "your_password"}'
+```
+
+Response:
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+2. **Use Token in Requests**:
+```bash
+curl -H "Authorization: Bearer your_access_token" \
+  http://localhost:8000/api/products/
+```
+
+3. **Refresh Token**:
+```bash
+curl -X POST http://localhost:8000/api/auth/token/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh": "your_refresh_token"}'
+```
+
+### Permission Model:
+- **Anonymous Users**: Can read all data (GET requests)
+- **Authenticated Users**: Can read and write all data (GET, POST, PUT, PATCH, DELETE)
+- **Invalid/Expired Tokens**: Return 401 Unauthorized
+
+### Token Configuration:
+- **Access Token Lifetime**: 60 minutes
+- **Refresh Token Lifetime**: 7 days
+- **Token Rotation**: Enabled (new refresh token on each refresh)
+
+## Demo Script
+
+Run the included demo script to test JWT authentication:
+
+```bash
+# Make sure server is running
+python manage.py runserver
+
+# In another terminal
+python demo_jwt_auth.py
+```
+
+This will demonstrate:
+- Token obtaining and verification
+- Public vs protected endpoints
+- Authentication failure scenarios
+- Token refresh workflow
+
 ## Dependencies
 
 - Django 5.2.5
 - djangorestframework 3.15.2
+- djangorestframework-simplejwt 5.3.0
 - Pillow 10.0.0 (for ImageField support)
 
 ## Contributing

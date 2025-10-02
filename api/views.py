@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.db.models import Q
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer, ProductListSerializer
@@ -12,6 +13,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     @action(detail=True, methods=['get'])
     def products(self, request, pk=None):
@@ -27,6 +29,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     ViewSet for Product model providing CRUD operations
     """
     queryset = Product.objects.select_related('category').all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
