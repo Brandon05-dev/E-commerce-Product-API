@@ -85,28 +85,96 @@ E-commerce-Product-API/
 - `POST /api/products/{id}/update_stock/` - Update product stock � *Staff/Admin Only*
 - `GET /api/categories/{id}/products/` - Get products in category 🔓 *Public*
 
-## Query Parameters
+## Query Parameters & Advanced Filtering
 
 ### Product Filtering
-- `?category=<id>` - Filter by category ID
+- `?category=<id|name>` - Filter by category ID or name (case-insensitive)
 - `?min_price=<value>` - Filter by minimum price
 - `?max_price=<value>` - Filter by maximum price
-- `?in_stock=true` - Filter products in stock
-- `?search=<term>` - Search in name and description
+- `?in_stock=<true|false>` - Filter products by stock status
+- `?min_stock=<value>` - Filter by minimum stock quantity
+- `?created_after=<ISO_date>` - Filter products created after date
+- `?created_before=<ISO_date>` - Filter products created before date
+- `?search=<term>` - Search in name, description, and category name
+- `?ordering=<field>` - Order by field (prefix with `-` for descending)
 
-### Examples
+### Category Filtering
+- `?search=<term>` - Search categories by name
+- `?ordering=<field>` - Order categories by field
+
+### Pagination Parameters
+- `?page=<number>` - Page number (default: 1)
+- `?page_size=<number>` - Items per page (default: 20 for products, 10 for categories)
+
+### Ordering Fields
+**Products:**
+- `name` - Product name
+- `price` - Product price  
+- `created_date` - Creation date
+- `stock_quantity` - Stock quantity
+
+**Categories:**
+- `name` - Category name
+- `id` - Category ID
+
+### Enhanced Search Examples
 ```bash
-# Get products in category 1
-GET /api/products/?category=1
+# Search across name, description, and category
+GET /api/products/?search=wireless headphones
 
-# Get products between $50-$200
-GET /api/products/?min_price=50&max_price=200
+# Multi-term search (finds products matching any term)
+GET /api/products/?search=gaming laptop
 
-# Search for "laptop"
-GET /api/products/?search=laptop
+# Search by category name
+GET /api/products/?category=electronics
 
-# Get in-stock electronics
-GET /api/products/?category=1&in_stock=true
+# Search categories
+GET /api/categories/?search=book
+```
+
+### Advanced Filtering Examples
+```bash
+# Get electronics products under $500
+GET /api/products/?category=electronics&max_price=500
+
+# Get products with low stock (less than 10 items)
+GET /api/products/?max_stock=9
+
+# Get products created in the last week
+GET /api/products/?created_after=2025-10-04T00:00:00Z
+
+# Get out-of-stock clothing items
+GET /api/products/?category=clothing&in_stock=false
+
+# Combine filters: expensive electronics in stock, ordered by price
+GET /api/products/?category=1&min_price=1000&in_stock=true&ordering=price
+
+# Get products with moderate to high stock, ordered by name
+GET /api/products/?min_stock=20&ordering=name
+```
+
+### Pagination Examples
+```bash
+# Get first page with 10 items per page
+GET /api/products/?page=1&page_size=10
+
+# Get second page of categories
+GET /api/categories/?page=2
+
+# Large page size for bulk operations (max 100 for products)
+GET /api/products/?page_size=50
+```
+
+### Combined Query Examples
+```bash
+# Search for laptops under $2000, in stock, ordered by price (desc)
+GET /api/products/?search=laptop&max_price=2000&in_stock=true&ordering=-price
+
+# Get electronics created this month with pagination
+GET /api/products/?category=electronics&created_after=2025-10-01T00:00:00Z&page_size=5
+
+# Search and filter category products
+GET /api/categories/1/products/?search=gaming&min_price=100&ordering=name
 ```
 
 ## Installation & Setup
@@ -158,12 +226,39 @@ Run the comprehensive test suite:
 python manage.py test api
 ```
 
-The test suite includes:
-- Model validation tests
-- API endpoint tests (GET, POST, PUT, DELETE)
-- Filtering and search tests
-- Error handling tests
-- Edge case tests
+### Test Coverage Includes:
+- **Model validation tests** - Product and Category model validation
+- **API endpoint tests** - CRUD operations for all endpoints
+- **Search functionality** - Multi-term search, category search, description search
+- **Advanced filtering** - Price range, stock status, date filtering, category filtering
+- **Pagination tests** - Custom pagination metadata and page sizing
+- **Ordering tests** - Sort by various fields in ascending/descending order
+- **Combined filtering** - Multiple filters working together
+- **Permission tests** - Role-based access control (Anonymous, Regular, Staff/Admin)
+- **JWT authentication** - Token generation, validation, refresh, expiration
+- **Error handling** - Invalid parameters, malformed requests, edge cases
+- **Enhanced serializers** - Additional fields and computed values
+
+### Test Categories:
+1. **ProductModelTest** - Product model functionality
+2. **CategoryModelTest** - Category model functionality  
+3. **ProductAPITest** - Basic product API operations
+4. **CategoryAPITest** - Basic category API operations
+5. **SearchFilterPaginationTest** - ⭐ New comprehensive filtering tests
+6. **JWTAuthenticationTest** - JWT token functionality
+7. **AdminPermissionTest** - Role-based permissions
+
+### Running Specific Test Categories:
+```bash
+# Run only the new search/filter/pagination tests
+python manage.py test api.tests.SearchFilterPaginationTest
+
+# Run permission tests
+python manage.py test api.tests.AdminPermissionTest
+
+# Run with verbose output
+python manage.py test api --verbosity=2
+```
 
 ## Admin Interface
 
@@ -182,13 +277,16 @@ The API uses Django REST Framework's browsable API. Visit any endpoint in your b
 
 Example: `http://127.0.0.1:8000/api/products/`
 
-## Sample API Responses
+## Enhanced API Responses
 
-### GET /api/products/
+### GET /api/products/ (Enhanced Pagination)
 ```json
 {
-  "count": 6,
-  "next": null,
+  "count": 25,
+  "total_pages": 2,
+  "current_page": 1,
+  "page_size": 20,
+  "next": "http://localhost:8000/api/products/?page=2",
   "previous": null,
   "results": [
     {
@@ -198,13 +296,15 @@ Example: `http://127.0.0.1:8000/api/products/`
       "stock_quantity": 50,
       "image_url": "https://example.com/smartphone.jpg",
       "category_name": "Electronics",
-      "is_in_stock": true
+      "is_in_stock": true,
+      "stock_status": "high_stock",
+      "created_date": "2025-10-02T08:41:30.123456Z"
     }
   ]
 }
 ```
 
-### GET /api/products/1/
+### GET /api/products/1/ (Enhanced Detail)
 ```json
 {
   "id": 1,
@@ -216,9 +316,69 @@ Example: `http://127.0.0.1:8000/api/products/`
   "created_date": "2025-10-02T08:41:30.123456Z",
   "category": 1,
   "category_name": "Electronics",
-  "is_in_stock": true
+  "category_details": {
+    "id": 1,
+    "name": "Electronics"
+  },
+  "is_in_stock": true,
+  "stock_status": "high_stock",
+  "inventory_value": 34999.50,
+  "days_since_created": 9
 }
 ```
+
+### GET /api/categories/ (Enhanced)
+```json
+{
+  "count": 3,
+  "total_pages": 1,
+  "current_page": 1,
+  "page_size": 10,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Electronics",
+      "products_count": 15,
+      "in_stock_products_count": 12,
+      "average_price": 456.78,
+      "total_inventory_value": 125430.50
+    }
+  ]
+}
+```
+
+### GET /api/categories/1/products/ (Enhanced Category Products)
+```json
+{
+  "count": 15,
+  "total_pages": 1,
+  "current_page": 1,
+  "page_size": 20,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Smartphone XYZ",
+      "price": "699.99",
+      "stock_quantity": 50,
+      "image_url": "https://example.com/smartphone.jpg",
+      "category_name": "Electronics",
+      "is_in_stock": true,
+      "stock_status": "high_stock",
+      "created_date": "2025-10-02T08:41:30.123456Z"
+    }
+  ]
+}
+```
+
+### Stock Status Values
+- `high_stock` - 50+ items in stock
+- `moderate_stock` - 10-49 items in stock  
+- `low_stock` - 1-9 items in stock
+- `out_of_stock` - 0 items in stock
 
 ## Production Considerations
 
@@ -363,11 +523,40 @@ The permission system uses a custom `IsAdminOrReadOnly` permission class that:
 - Restricts unsafe operations (POST, PUT, PATCH, DELETE) to staff and admin users only
 - Returns appropriate HTTP status codes (403 Forbidden for unauthorized write attempts)
 
+## Enhanced Features ✨
+
+### 🔍 Advanced Search & Filtering
+- **Multi-field search**: Search across product names, descriptions, and category names
+- **Multi-term search**: Find products matching any of multiple search terms
+- **Smart filtering**: Filter by category ID or name, price range, stock levels, creation date
+- **Combined filters**: Mix and match multiple filters for precise results
+
+### 📄 Enhanced Pagination
+- **Custom pagination**: Detailed pagination metadata with page counts and navigation
+- **Flexible page sizes**: Configurable page sizes with sensible defaults and limits
+- **Context-aware**: Different pagination settings for different endpoints
+
+### 📊 Rich API Responses  
+- **Stock status indicators**: Human-readable stock levels (high/moderate/low/out)
+- **Calculated fields**: Inventory values, days since creation, category statistics
+- **Enhanced metadata**: Comprehensive category statistics including average prices
+
+### ⚡ Performance Optimizations
+- **Query optimization**: select_related() to minimize database queries
+- **Efficient filtering**: Database-level filtering for better performance
+- **Smart serializers**: Different serializers for list vs detail views
+
+### 🎯 Flexible Ordering
+- **Multiple sort fields**: Order by name, price, date, stock quantity
+- **Ascending/descending**: Support for both sort directions
+- **Default ordering**: Sensible defaults with newest products first
+
 ## Dependencies
 
 - Django 5.2.5
 - djangorestframework 3.15.2
 - djangorestframework-simplejwt 5.3.0
+- django-filter 24.3 (for advanced filtering)
 - Pillow 10.0.0 (for ImageField support)
 
 ## Contributing

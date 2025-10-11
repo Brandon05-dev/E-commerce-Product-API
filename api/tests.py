@@ -164,6 +164,283 @@ class ProductAPITest(APITestCase):
         self.assertEqual(len(response.data['results']), 1)
 
 
+class SearchFilterPaginationTest(APITestCase):
+    """Test cases for enhanced search, filtering, and pagination features"""
+    
+    def setUp(self):
+        # Create test categories
+        self.electronics = Category.objects.create(name="Electronics")
+        self.books = Category.objects.create(name="Books")
+        self.clothing = Category.objects.create(name="Clothing")
+        
+        # Create test products with varied data
+        self.products = [
+            Product.objects.create(
+                name="Smartphone Pro",
+                description="Latest flagship smartphone with advanced features",
+                price=Decimal('999.99'),
+                stock_quantity=25,
+                category=self.electronics
+            ),
+            Product.objects.create(
+                name="Laptop Gaming",
+                description="High-performance gaming laptop",
+                price=Decimal('1599.99'),
+                stock_quantity=5,
+                category=self.electronics
+            ),
+            Product.objects.create(
+                name="Python Programming Book",
+                description="Comprehensive guide to Python programming",
+                price=Decimal('49.99'),
+                stock_quantity=100,
+                category=self.books
+            ),
+            Product.objects.create(
+                name="T-Shirt Cotton",
+                description="Premium cotton t-shirt",
+                price=Decimal('29.99'),
+                stock_quantity=0,
+                category=self.clothing
+            ),
+            Product.objects.create(
+                name="Wireless Headphones",
+                description="Noise-cancelling wireless headphones",
+                price=Decimal('299.99'),
+                stock_quantity=15,
+                category=self.electronics
+            ),
+        ]
+        
+        self.products_url = reverse('product-list')
+        self.categories_url = reverse('category-list')
+    
+    def test_enhanced_search_functionality(self):
+        """Test enhanced search with multiple terms"""
+        # Search by product name
+        response = self.client.get(f"{self.products_url}?search=smartphone")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Smartphone Pro')
+        
+        # Search by description
+        response = self.client.get(f"{self.products_url}?search=gaming")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Laptop Gaming')
+        
+        # Search by category name
+        response = self.client.get(f"{self.products_url}?search=electronics")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)
+        
+        # Multi-term search
+        response = self.client.get(f"{self.products_url}?search=python programming")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Python Programming Book')
+    
+    def test_price_range_filtering(self):
+        """Test filtering by price range"""
+        # Filter by minimum price
+        response = self.client.get(f"{self.products_url}?min_price=100")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(float(product['price']) >= 100 for product in results))
+        
+        # Filter by maximum price  
+        response = self.client.get(f"{self.products_url}?max_price=100")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(float(product['price']) <= 100 for product in results))
+        
+        # Filter by price range
+        response = self.client.get(f"{self.products_url}?min_price=50&max_price=500")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(50 <= float(product['price']) <= 500 for product in results))
+    
+    def test_category_filtering(self):
+        """Test filtering by category ID and name"""
+        # Filter by category ID
+        response = self.client.get(f"{self.products_url}?category={self.electronics.pk}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)
+        
+        # Filter by category name
+        response = self.client.get(f"{self.products_url}?category=books")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['category_name'], 'Books')
+    
+    def test_stock_filtering(self):
+        """Test filtering by stock status"""
+        # Filter in-stock products
+        response = self.client.get(f"{self.products_url}?in_stock=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(product['is_in_stock'] for product in results))
+        
+        # Filter out-of-stock products
+        response = self.client.get(f"{self.products_url}?in_stock=false")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(not product['is_in_stock'] for product in results))
+        
+        # Filter by minimum stock quantity
+        response = self.client.get(f"{self.products_url}?min_stock=20")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(product['stock_quantity'] >= 20 for product in results))
+    
+    def test_ordering_functionality(self):
+        """Test ordering by different fields"""
+        # Order by price ascending
+        response = self.client.get(f"{self.products_url}?ordering=price")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        prices = [float(product['price']) for product in results]
+        self.assertEqual(prices, sorted(prices))
+        
+        # Order by price descending
+        response = self.client.get(f"{self.products_url}?ordering=-price")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        prices = [float(product['price']) for product in results]
+        self.assertEqual(prices, sorted(prices, reverse=True))
+        
+        # Order by name
+        response = self.client.get(f"{self.products_url}?ordering=name")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        names = [product['name'] for product in results]
+        self.assertEqual(names, sorted(names))
+    
+    def test_combined_filtering(self):
+        """Test combining multiple filters"""
+        response = self.client.get(
+            f"{self.products_url}?category={self.electronics.pk}&min_price=200&in_stock=true&ordering=price"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        
+        # Check all filters are applied
+        for product in results:
+            self.assertEqual(product['category_name'], 'Electronics')
+            self.assertGreaterEqual(float(product['price']), 200)
+            self.assertTrue(product['is_in_stock'])
+        
+        # Check ordering
+        if len(results) > 1:
+            prices = [float(product['price']) for product in results]
+            self.assertEqual(prices, sorted(prices))
+    
+    def test_pagination_metadata(self):
+        """Test custom pagination response format"""
+        response = self.client.get(f"{self.products_url}?page_size=2")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check pagination metadata
+        self.assertIn('count', response.data)
+        self.assertIn('total_pages', response.data)
+        self.assertIn('current_page', response.data)
+        self.assertIn('page_size', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
+        self.assertIn('results', response.data)
+        
+        # Check page size is respected
+        self.assertEqual(len(response.data['results']), 2)
+        self.assertEqual(response.data['page_size'], 2)
+        self.assertEqual(response.data['current_page'], 1)
+    
+    def test_category_products_endpoint_with_filtering(self):
+        """Test category products endpoint with filtering"""
+        category_products_url = reverse('category-products', kwargs={'pk': self.electronics.pk})
+        
+        # Test basic endpoint
+        response = self.client.get(category_products_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # We have 3 electronics products in the test data
+        self.assertEqual(len(response.data['results']), 3)
+        
+        # Test with price filtering
+        response = self.client.get(f"{category_products_url}?min_price=500")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        self.assertTrue(all(float(product['price']) >= 500 for product in results))
+        
+        # Test with search
+        response = self.client.get(f"{category_products_url}?search=gaming")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Laptop Gaming')
+    
+    def test_invalid_filter_parameters(self):
+        """Test handling of invalid filter parameters"""
+        # Invalid price format
+        response = self.client.get(f"{self.products_url}?min_price=invalid")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should return all products (filter ignored)
+        
+        # Invalid category ID
+        response = self.client.get(f"{self.products_url}?category=999")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+        
+        # Invalid stock quantity
+        response = self.client.get(f"{self.products_url}?min_stock=invalid")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should return all products (filter ignored)
+    
+    def test_empty_search_results(self):
+        """Test search with no matching results"""
+        response = self.client.get(f"{self.products_url}?search=nonexistent")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
+        self.assertEqual(response.data['count'], 0)
+    
+    def test_category_search_and_ordering(self):
+        """Test category search and ordering"""
+        # Test category search
+        response = self.client.get(f"{self.categories_url}?search=book")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Books')
+        
+        # Test category ordering
+        response = self.client.get(f"{self.categories_url}?ordering=name")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        names = [category['name'] for category in results]
+        self.assertEqual(names, sorted(names))
+    
+    def test_enhanced_serializer_fields(self):
+        """Test enhanced serializer fields in responses"""
+        # Test product detail serializer
+        product = self.products[0]
+        product_detail_url = reverse('product-detail', kwargs={'pk': product.pk})
+        response = self.client.get(product_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check enhanced fields
+        self.assertIn('stock_status', response.data)
+        self.assertIn('inventory_value', response.data)
+        self.assertIn('days_since_created', response.data)
+        self.assertIn('category_details', response.data)
+        
+        # Test category detail serializer
+        category_detail_url = reverse('category-detail', kwargs={'pk': self.electronics.pk})
+        response = self.client.get(category_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check enhanced fields
+        self.assertIn('products_count', response.data)
+        self.assertIn('in_stock_products_count', response.data)
+        self.assertIn('average_price', response.data)
+        self.assertIn('total_inventory_value', response.data)
+
+
 class CategoryAPITest(APITestCase):
     """Test cases for Category API endpoints"""
     
