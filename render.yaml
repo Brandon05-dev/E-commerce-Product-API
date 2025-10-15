@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ecommerce-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn ecommerce_api.wsgi:application
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ecommerce-db
+          property: connectionString
+    autoDeploy: true
+
+databases:
+  - name: ecommerce-db
+    plan: starter
+    databaseName: ecommerce_db
+    user: ecommerce_user

@@ -1,0 +1,24 @@
+# Railway Deployment Configuration
+# https://railway.app
+
+# This file is not required but provides Railway-specific settings
+# Railway will automatically detect your Django app and deploy it
+
+# Environment Variables to set in Railway Dashboard:
+# - SECRET_KEY: Generate a secure random key
+# - DEBUG: False
+# - ALLOWED_HOSTS: your-app.railway.app
+# - DATABASE_URL: Automatically set by Railway when you add PostgreSQL
+# - CORS_ALLOWED_ORIGINS: https://your-frontend-domain.com
+
+# Railway will automatically:
+# 1. Install dependencies from requirements.txt
+# 2. Run migrations
+# 3. Collect static files
+# 4. Start gunicorn server
+
+# Build Command (optional):
+# pip install -r requirements.txt && python manage.py collectstatic --noinput
+
+# Start Command (optional):
+# gunicorn ecommerce_api.wsgi:application --bind 0.0.0.0:$PORT
