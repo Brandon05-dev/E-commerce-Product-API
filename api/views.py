@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status, filters, generics
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -12,6 +12,12 @@ from .serializers import (
 )
 from .permissions import IsAdminOrReadOnly
 from .pagination import StandardResultsSetPagination, SmallResultsSetPagination
+
+
+@api_view(['GET'])
+def home(request):
+    """Simple root view returning a JSON health message."""
+    return Response({"message": "API is running!"})
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
