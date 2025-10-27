@@ -1,0 +1,180 @@
+@baseUrl = https://ecommerce-api-we8v.onrender.com/api/v1
+@token = YOUR_TOKEN_HERE
+@name = Brandon
+@email = brandon@test.com
+@password = Test1234
+@userId = 68ffdfe589ef73e46748fd41
+@productId = 65153c5a2af9babe637c903e
+@orderId = ORDER_ID
+@reviewId = REVIEW_ID
+
+# ---------------------------
+# 1. Authentication Endpoints
+# ---------------------------
+
+### Register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "{{name}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+# After login, copy the token value (usually in the response) and set @token above.
+
+### Logout
+GET {{baseUrl}}/auth/logout
+
+
+# ---------------------------
+# 2. Users Endpoints
+# ---------------------------
+
+### Get All Users
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+### Get Single User
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Show Current User
+GET {{baseUrl}}/users/showMe
+Authorization: Bearer {{token}}
+
+### Update User Password
+PATCH {{baseUrl}}/users/updateUserPassword
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "NewPass1234"
+}
+
+### Update User Info
+PATCH {{baseUrl}}/users/updateUser
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Brandon O",
+  "email": "brandon.o@test.com"
+}
+
+
+# ---------------------------
+# 3. Products Endpoints
+# ---------------------------
+
+### Get All Products
+GET {{baseUrl}}/products
+
+### Get Single Product
+GET {{baseUrl}}/products/{{productId}}
+
+### Create Product
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "New Product",
+  "price": 19999,
+  "description": "Test product",
+  "category": "office",
+  "company": "marcos",
+  "colors": ["#ff0000","#00ff00"],
+  "featured": true,
+  "freeShipping": true,
+  "inventory": 50
+}
+
+### Update Product
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "price": 25999,
+  "inventory": 30
+}
+
+### Delete Product
+DELETE {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{token}}
+
+
+# ---------------------------
+# 4. Orders Endpoints
+# ---------------------------
+
+### Get All Orders
+GET {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+
+### Create Order
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "products": [{"product": "{{productId}}","quantity":2}],
+  "shippingAddress": "123 Main St, Nairobi"
+}
+
+### Get Single Order
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Update Order
+PATCH {{baseUrl}}/orders/{{orderId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{"status":"shipped"}
+
+
+# ---------------------------
+# 5. Reviews Endpoints
+# ---------------------------
+
+### Get All Reviews
+GET {{baseUrl}}/reviews
+
+### Create Review
+POST {{baseUrl}}/reviews
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Great Product",
+  "rating": 5,
+  "comment": "Loved it!",
+  "product": "{{productId}}"
+}
+
+### Get Single Review
+GET {{baseUrl}}/reviews/{{reviewId}}
+
+### Update Review
+PATCH {{baseUrl}}/reviews/{{reviewId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{"rating":4,"comment":"Updated comment"}
+
+### Delete Review
+DELETE {{baseUrl}}/reviews/{{reviewId}}
+Authorization: Bearer {{token}}
