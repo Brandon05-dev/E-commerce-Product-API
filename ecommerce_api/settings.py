@@ -26,9 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-r!5u9u7q66)2pu&+63($&zn1hndb4ypp$uihex#rggkyekxy)%')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# Default DEBUG to False for production; can be overridden with the DEBUG env var.
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# Include the Render hostname by default and allow overriding via ALLOWED_HOSTS env var.
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,e-commerce-product-api-044n.onrender.com',
+    cast=Csv(),
+)
 
 
 # Application definition
@@ -128,7 +134,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = []
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Media files
 MEDIA_URL = '/media/'
@@ -151,8 +157,9 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Alternatively, allow all origins in development (not recommended for production)
-# CORS_ALLOW_ALL_ORIGINS = DEBUG
+# Allow all origins for APIs by default on Render (can be changed via env var).
+# Note: permitting all origins is intentional for API access; tighten this if needed.
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=bool)
 
 # Security Settings for Production
 if not DEBUG:
